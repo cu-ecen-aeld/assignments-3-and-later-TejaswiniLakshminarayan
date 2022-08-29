@@ -10,14 +10,24 @@ if [ "$#" != "2" ];
 then
 	echo "Two arguments needs to be passed"
 	exit 1
-else
-	# check if the directory exits
+fi
+
+
+# check if the directory exists
+{ 
 	if [ ! -d "$1" ];
 	then
-		# creating the path
+	# creating the path
 		mkdir -p "$(dirname .$1)" && touch ".$1" && echo "$2" > ".$1"
-		
 	else
 		echo "$2" > ".$1"
 	fi
-fi
+
+} || {
+	echo "file could not be created"
+	exit 1
+}
+
+	
+
+
