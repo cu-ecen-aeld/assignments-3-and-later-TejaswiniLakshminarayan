@@ -21,8 +21,8 @@ fi
 
 # num_files represents number of files having the text
 # num_lines represents number of matching lines
-num_files=$(grep -lr "$2" ".$1" | wc -l)
-num_lines=$(grep -r "$2" ".$1" | wc -l)
+num_files=$(grep -lr "$2" "$1" | wc -l)
+num_lines=$(grep -r "$2" "$1" | wc -l)
 echo "The number of files are $num_files and the number of matching lines are $num_lines"
 
 
