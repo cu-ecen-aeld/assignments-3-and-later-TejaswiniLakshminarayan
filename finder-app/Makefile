@@ -1,6 +1,6 @@
 CROSS_COMPILE = gcc
 CFLAGS = -g -Wall
-default: clean build
+all: build
 
 clean: 
 	rm -f *.o writer *.elf *.map	
