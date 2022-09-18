@@ -10,6 +10,9 @@ WRITESTR=AELD_IS_FUN
 WRITEDIR=/tmp/aeld-data
 username=$(cat conf/username.txt)
 
+#FINDER=$(which finder.sh)
+#WRITER=$(which writer)
+
 if [ $# -lt 2 ]
 then
 	echo "Using default value ${WRITESTR} for string to write"
@@ -47,10 +50,12 @@ fi
 
 for i in $( seq 1 $NUMFILES)
 do
-	./writer "$WRITEDIR/${username}$i.txt" "$WRITESTR"
+	$(dirname "$0")/writer "$WRITEDIR/${username}$i.txt" "$WRITESTR"
 done
 
-OUTPUTSTRING=$(./finder.sh "$WRITEDIR" "$WRITESTR")
+OUTPUTSTRING=$($(dirname "$0")/finder.sh "$WRITEDIR" "$WRITESTR")
+
+echo ${OUTPUTSTRING} > /tmp/assignment4-result.txt
 
 set +e
 echo ${OUTPUTSTRING} | grep "${MATCHSTR}"
