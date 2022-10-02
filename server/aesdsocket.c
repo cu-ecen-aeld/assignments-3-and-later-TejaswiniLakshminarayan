@@ -22,6 +22,7 @@
 #include <stdbool.h>
 #include <syslog.h>
 #include <net/if.h>
+#include <sys/stat.h>
 
 
 #define DOMAIN AF_INET
