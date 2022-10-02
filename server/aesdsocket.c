@@ -1,3 +1,10 @@
+/*
+ * Author: Tejaswini Lakshminarayan
+ * Socket based program for Assignment 5 Part 1
+ * 
+ */
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
