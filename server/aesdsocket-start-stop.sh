@@ -8,7 +8,7 @@
 case "$1" in
   start)
   	echo -n "Starting daemon "
-        start-stop-daemon -S -n aesdsocket -a usr/bin/aesdsocket -- -d
+        start-stop-daemon -S -n aesdsocket -a /usr/bin/aesdsocket -- -d
         ;;
   stop)
         echo -n "Stopping daemon "
