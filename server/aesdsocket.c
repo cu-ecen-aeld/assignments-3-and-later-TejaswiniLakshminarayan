@@ -69,12 +69,12 @@ void time_stamp()
     //strcat(timestamp, time_buffer);
     printf("%s", time_buffer);
     lseek(file_fd, 0, SEEK_END);
-    int count = strlen(time_buffer);
+    int count_bytes = strlen(time_buffer);
     //writing to the file
-    int rc = write(file_fd, time_buffer, count);
-    if (rc != count){
+    int write_bytes_count = write(file_fd, time_buffer, count_bytes);
+    if (write_bytes_count != count_bytes){
         printf("write unsuccessful\n");
-        perror("write unsuccessful\n");
+        //perror("write unsuccessful\n");
     }
     printf("exiting timestamp\n");
 }
