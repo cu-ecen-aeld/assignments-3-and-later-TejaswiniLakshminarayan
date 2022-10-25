@@ -170,7 +170,7 @@ int aesd_init_module(void)
     /**
      * TODO: initialize the AESD specific portion of the device
      */
-    aesd_circular_buffer_init(&aesd_device->aesd_buffer);
+    aesd_circular_buffer_init(&aesd_device.aesd_buffer);
     mutex_init(&aesd_device.buffer_write_lock);
     result = aesd_setup_cdev(&aesd_device);
         if( result ) {
