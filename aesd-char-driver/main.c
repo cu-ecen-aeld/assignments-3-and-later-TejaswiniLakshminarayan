@@ -192,7 +192,7 @@ void aesd_cleanup_module(void)
     uint8_t index;
 
     kfree(aesd_device.buffer_entry.buffptr);
-    AESD_CIRCULAR_BUFFER_FOREACH(buffer_entry, &aesd_device->aesd_buffer, index) {
+    AESD_CIRCULAR_BUFFER_FOREACH(buffer_entry, &aesd_device.aesd_buffer, index) {
         if (buffer_entry->buffptr != NULL)
             kfree(buffer_entry->buffptr);
     }
