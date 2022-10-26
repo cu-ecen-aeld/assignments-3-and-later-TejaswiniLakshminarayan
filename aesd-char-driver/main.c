@@ -31,7 +31,7 @@ struct aesd_dev aesd_device;
 
 int aesd_open(struct inode *inode, struct file *filp)
 {
-    struct aesd_dev* char_ptr;
+    struct aesd_dev* char_ptr = NULL;
     PDEBUG("open AESD CHAR DRIVER");
     /**
      * TODO: handle open
@@ -129,7 +129,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         dev->buffer_entry.buffptr = krealloc(dev->buffer_entry.buffptr, dev->buffer_entry.size + count, GFP_KERNEL);
     }
 
-    if (!dev->buffer_entry.buffptr) {
+    if (dev->buffer_entry.buffptr == NULL) {
         retval = -ENOMEM;
         mutex_unlock(&dev->buffer_write_lock);
         PDEBUG("aesd_write: mutex_unlock");
@@ -197,10 +197,11 @@ int aesd_init_module(void)
     /**
      * TODO: initialize the AESD specific portion of the device
      */
-    aesd_circular_buffer_init(&aesd_device.aesd_buffer);
+     
+    // aesd_circular_buffer_init(&aesd_device.aesd_buffer);
     mutex_init(&aesd_device.buffer_write_lock);
     result = aesd_setup_cdev(&aesd_device);
-        if( result ) {
+    if(result) {
         unregister_chrdev_region(dev, 1);
     }
     return result;

@@ -29,38 +29,30 @@
 struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct aesd_circular_buffer *buffer,
             size_t char_offset, size_t *entry_offset_byte_rtn )
 {
-    struct aesd_buffer_entry *ptr;
-    uint8_t count = 0, index; 
+    int index = buffer->out_offs;
+    size_t count = (buffer->entry[index]).size;
+    size_t prev = 0;
+    // struct aesd_buffer_entry *ptr;
+    // uint8_t count = 0, index; 
 
     // check for NULL pointers
-    if(buffer == NULL)
+    if(buffer == NULL || entry_offset_byte_rtn == NULL)
     {
         return NULL;
     }
-    if(entry_offset_byte_rtn == NULL)
-    {
-        return NULL;
-    }
-    char_offset++;
-    while (count < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED)
-    {
-        index = (buffer->out_offs + count) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
-        ptr = &(buffer->entry[index]);
-        if(ptr == NULL)
-        {
+
+    while (char_offset > (count - 1)) {
+        prev = count;
+        index = (index + 1) % (AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED);
+        if (index == buffer->out_offs) {
             return NULL;
         }
-        if(char_offset <= ptr->size)
-        {
-            //offset present
-            *entry_offset_byte_rtn = char_offset - 1;
-            return ptr;
-        }
-        else
-        {
-            char_offset = char_offset - (ptr->size);
-        }
-        count++;
+        count += (buffer->entry[index]).size;
+    }
+
+    if (char_offset <= (count - 1)) {
+        *entry_offset_byte_rtn = char_offset - prev;
+        return &buffer->entry[index];
     }
     return NULL;
 }
@@ -76,14 +68,10 @@ const char * aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer,
 {
     const char *ret_ptr = NULL;
     // check for NULL pointers
-    if(buffer == NULL)
-    {
+    if(buffer == NULL || add_entry == NULL) {
         return ret_ptr;
     }
-    if (add_entry == NULL)
-    {
-        return ret_ptr;
-    }
+
     if (buffer->full) {
         ret_ptr = buffer->entry[buffer->out_offs].buffptr;
     }
