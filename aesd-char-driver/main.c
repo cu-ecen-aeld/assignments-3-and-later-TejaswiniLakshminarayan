@@ -32,7 +32,7 @@ struct aesd_dev aesd_device;
 int aesd_open(struct inode *inode, struct file *filp)
 {
     struct aesd_dev* char_ptr;
-    PDEBUG("open");
+    PDEBUG("open AESD CHAR DRIVER");
     /**
      * TODO: handle open
      */
@@ -44,7 +44,7 @@ int aesd_open(struct inode *inode, struct file *filp)
 
 int aesd_release(struct inode *inode, struct file *filp)
 {
-    PDEBUG("release");
+    PDEBUG("release AESD CHAR DRIVER");
     /**
      * TODO: handle release
      */
@@ -54,6 +54,7 @@ int aesd_release(struct inode *inode, struct file *filp)
 ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)
 {
+    PDEBUG("aesd_read begin");
     ssize_t retval = 0;
     size_t offset_byte = 0;
     size_t remaining_bytes = 0;
@@ -91,12 +92,14 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     *f_pos += read_bytes;
     retval = read_bytes;
     mutex_unlock(&dev->buffer_write_lock);
+    PDEBUG("aesd_read end");
     return retval;
 }
 
 ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
                 loff_t *f_pos)
 {
+    PDEBUG("aesd_write begin");
     ssize_t retval = -ENOMEM;
     const char * ret_entry = NULL;
     size_t num_bytes;
@@ -109,12 +112,14 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     dev = filp->private_data;
     if (dev == NULL) {
         //mutex_unlock(&dev->buffer_write_lock);
+        PDEBUG("aesd_write: dev == NULL");
         return retval;
     }
 
     if (mutex_lock_interruptible(&dev->buffer_write_lock)) {
         retval = -ERESTARTSYS;
         //mutex_unlock(&dev->buffer_write_lock);
+        PDEBUG("aesd_write: mutex_lock_interruptible");
         return retval;
     }
 
@@ -127,6 +132,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     if (!dev->buffer_entry.buffptr) {
         retval = -ENOMEM;
         mutex_unlock(&dev->buffer_write_lock);
+        PDEBUG("aesd_write: mutex_unlock");
         return retval;
     }
 
@@ -148,6 +154,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         dev->buffer_entry.buffptr = NULL;
     }
     mutex_unlock(&dev->buffer_write_lock);
+    PDEBUG("aesd_write end");
     return retval;
 }
 struct file_operations aesd_fops = {
