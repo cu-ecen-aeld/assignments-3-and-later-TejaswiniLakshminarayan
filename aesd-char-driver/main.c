@@ -15,12 +15,12 @@
 #include <linux/init.h>
 #include <linux/printk.h>
 #include <linux/types.h>
-#include <linux/string.h>
 #include <linux/cdev.h>
 #include <linux/fs.h> // file_operations
-#include "aesdchar.h"
 #include <linux/slab.h>
+#include <linux/string.h>
 #include <linux/uaccess.h>
+#include "aesdchar.h"
 int aesd_major =   0; // use dynamic major
 int aesd_minor =   0;
 
@@ -54,13 +54,13 @@ int aesd_release(struct inode *inode, struct file *filp)
 ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)
 {
-    PDEBUG("aesd_read begin");
     ssize_t retval = 0;
     size_t offset_byte = 0;
     size_t remaining_bytes = 0;
     size_t read_bytes = 0;
     struct aesd_buffer_entry* buffer_entry = NULL;
     struct aesd_dev *dev = filp->private_data;
+    PDEBUG("aesd_read begin");
     PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
     /**
      * TODO: handle read
@@ -99,49 +99,36 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
                 loff_t *f_pos)
 {
-    PDEBUG("aesd_write begin");
-    ssize_t retval = -ENOMEM;
+    ssize_t retval = 0;
     const char * ret_entry = NULL;
-    size_t num_bytes;
+    size_t num_bytes = 0;
     struct aesd_dev *dev = NULL;
-
+    PDEBUG("aesd_write begin");
     PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
     /**
      * TODO: handle write
      */
     dev = filp->private_data;
-    if (dev == NULL) {
-        //mutex_unlock(&dev->buffer_write_lock);
+    if (!dev) {
         PDEBUG("aesd_write: dev == NULL");
-        return retval;
+        return -ENOMEM;
     }
 
     if (mutex_lock_interruptible(&dev->buffer_write_lock)) {
-        retval = -ERESTARTSYS;
-        //mutex_unlock(&dev->buffer_write_lock);
         PDEBUG("aesd_write: mutex_lock_interruptible");
-        return retval;
+        return -ERESTARTSYS;
     }
 
-    if (!dev->buffer_entry.size) {
-        dev->buffer_entry.buffptr = kzalloc(count, GFP_KERNEL);
-    } else {
-        dev->buffer_entry.buffptr = krealloc(dev->buffer_entry.buffptr, dev->buffer_entry.size + count, GFP_KERNEL);
-    }
+    dev->buffer_entry.buffptr = (dev->buffer_entry.size == 0) ? kzalloc(count, GFP_KERNEL) :  krealloc(dev->buffer_entry.buffptr, dev->buffer_entry.size + count, GFP_KERNEL);
 
-    if (dev->buffer_entry.buffptr == NULL) {
-        retval = -ENOMEM;
+    if (!dev->buffer_entry.buffptr) {
         mutex_unlock(&dev->buffer_write_lock);
         PDEBUG("aesd_write: mutex_unlock");
-        return retval;
+        return -ENOMEM;
     }
 
-    num_bytes = copy_to_user((void *)(&dev->buffer_entry.buffptr[dev->buffer_entry.size]), buf, count);
-    if (num_bytes) {
-        retval = count - num_bytes;
-    } else {
-        retval = count;
-    }
+    num_bytes = copy_from_user((void *)(&dev->buffer_entry.buffptr[dev->buffer_entry.size]), buf, count);
+    retval = num_bytes ? count - num_bytes : count;
 
     dev->buffer_entry.size += retval;
     
@@ -178,8 +165,6 @@ static int aesd_setup_cdev(struct aesd_dev *dev)
     }
     return err;
 }
-
-
 
 int aesd_init_module(void)
 {
