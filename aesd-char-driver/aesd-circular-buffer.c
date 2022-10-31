@@ -29,38 +29,30 @@
 struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct aesd_circular_buffer *buffer,
             size_t char_offset, size_t *entry_offset_byte_rtn )
 {
-    struct aesd_buffer_entry *ptr;
-    uint8_t count = 0, index; 
+    int index = buffer->out_offs;
+    size_t count = (buffer->entry[index]).size;
+    size_t prev = 0;
+    // struct aesd_buffer_entry *ptr;
+    // uint8_t count = 0, index; 
 
     // check for NULL pointers
-    if(buffer == NULL)
+    if(buffer == NULL || entry_offset_byte_rtn == NULL)
     {
         return NULL;
     }
-    if(entry_offset_byte_rtn == NULL)
-    {
-        return NULL;
-    }
-    char_offset++;
-    while (count < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED)
-    {
-        index = (buffer->out_offs + count) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
-        ptr = &(buffer->entry[index]);
-        if(ptr == NULL)
-        {
+
+    while (char_offset > (count - 1)) {
+        prev = count;
+        index = (index + 1) % (AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED);
+        if (index == buffer->out_offs) {
             return NULL;
         }
-        if(char_offset <= ptr->size)
-        {
-            //offset present
-            *entry_offset_byte_rtn = char_offset - 1;
-            return ptr;
-        }
-        else
-        {
-            char_offset = char_offset - (ptr->size);
-        }
-        count++;
+        count += (buffer->entry[index]).size;
+    }
+
+    if (char_offset <= (count - 1)) {
+        *entry_offset_byte_rtn = char_offset - prev;
+        return &buffer->entry[index];
     }
     return NULL;
 }
@@ -72,16 +64,16 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
 * Any necessary locking must be handled by the caller
 * Any memory referenced in @param add_entry must be allocated by and/or must have a lifetime managed by the caller.
 */
-void aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const struct aesd_buffer_entry *add_entry)
+const char * aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const struct aesd_buffer_entry *add_entry)
 {
+    const char *ret_ptr = NULL;
     // check for NULL pointers
-    if(buffer == NULL)
-    {
-        return;
+    if(buffer == NULL || add_entry == NULL) {
+        return ret_ptr;
     }
-    if (add_entry == NULL)
-    {
-        return;
+
+    if (buffer->full) {
+        ret_ptr = buffer->entry[buffer->out_offs].buffptr;
     }
     // Adds entry add_entry to buffer in the location specified in buffer->in_offs
     buffer->entry[buffer->in_offs] = *add_entry;
@@ -91,7 +83,7 @@ void aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const s
 
     //If the buffer was already full, overwrite the oldest entry and advances buffer->out_offs to the
     //new start location.
-    if(buffer->full){
+    if(buffer->full) {
         buffer->out_offs = (buffer->out_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
     }
 
@@ -104,7 +96,7 @@ void aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const s
     {
         buffer->full = false;
     }
-
+    return ret_ptr;
 }
 
 /**

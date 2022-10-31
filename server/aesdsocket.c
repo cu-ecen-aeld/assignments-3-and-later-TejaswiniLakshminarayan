@@ -15,9 +15,6 @@
 #include <signal.h>
 #include <netdb.h>
 #include <unistd.h>
-#include <string.h>
-#include <netdb.h>
-#include <signal.h>
 #include <fcntl.h>
 #include <stdbool.h>
 #include <syslog.h>
@@ -33,8 +30,13 @@
 #define TYPE SOCK_STREAM
 #define PROTOCOL 0
 #define PORT 9000
-//#define BUFFER_SIZE 1024
 
+#define USE_AESD_CHAR_DEVICE 1
+#if USE_AESD_CHAR_DEVICE
+#define AESDCHARDEVICE "/dev/aesdchar"
+#else
+#define AESDCHARDEVICE "/var/tmp/aesdsocketdata"
+#endif
 
 int file_fd;
 int sockfd;
@@ -89,6 +91,8 @@ void free_memory()
         TAILQ_REMOVE(&head, temp, entries);
         free(temp);
     }
+    pthread_mutex_destroy(&lock);
+    exit(0);
 }
 
 void handle_signal(int signum)
@@ -105,9 +109,8 @@ void handle_signal(int signum)
         printf("Caught signal %d\n", signum);
         close(file_fd);
         close(sockfd);
-        remove("/var/tmp/aesdsocketdata");
+        remove(AESDCHARDEVICE);
         free_memory();
-        exit (0);
     }
 }
 
@@ -121,6 +124,12 @@ void * thread_function(void* thread_param)
     int incoming_bytes = 0;
     data->thread_complete_status=false;
     
+    file_fd = open(AESDCHARDEVICE, O_RDWR | O_APPEND | O_CREAT, 0777);
+    if (file_fd < 0)
+    {
+        printf("Error opening file\n");
+    }
+
     while(!packet_complete_status)
     {
         if(realloc_status)
@@ -185,6 +194,7 @@ void * thread_function(void* thread_param)
     incoming_bytes = 0;
     free(write_buffer);
     data->thread_complete_status=true;
+    close(file_fd);
     return thread_param;
 }
 
@@ -254,21 +264,19 @@ int main(int argc, char **argv) {
                 dup(0);
                 dup(0);
                 printf("Daemon created successfully\n");
-                //exit (0);
             } else {
                 exit(0);
             }
         }
     }
 
-    printf("opening /var/tmp/aesdsocketdata\n");
-    file_fd = open("/var/tmp/aesdsocketdata", O_RDWR | O_CREAT | O_TRUNC,
-                   S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+    // file_fd = open("/var/tmp/aesdsocketdata", O_RDWR | O_CREAT | O_TRUNC,
+    //                S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 
-    if (file_fd == -1) {
-        perror("error opening the file");
-    }
-    printf("file successfully opened\n");
+    // if (file_fd == -1) {
+    //     perror("error opening the file");
+    // }
+    // printf("file successfully opened\n");
     
     //mutex init
     pthread_mutex_init(&lock, NULL);
@@ -309,11 +317,14 @@ int main(int argc, char **argv) {
 
         TAILQ_INSERT_TAIL(&head, data, entries);
         data = NULL;
+        free(data);
 
-        if (!alarm_flag) {
-            alarm_flag = true;
-            printf("alarm set\n");
-            alarm(10);
+        if(!AESDCHARDEVICE) {
+            if (!alarm_flag) {
+                alarm_flag = true;
+                printf("alarm set\n");
+                alarm(10);
+            }
         }
 
         thread_data_t *entry = NULL;
