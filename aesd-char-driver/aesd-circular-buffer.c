@@ -16,6 +16,29 @@
 
 #include "aesd-circular-buffer.h"
 
+#ifdef __KERNEL__
+loff_t aesd_circular_buffer_llseek(struct aesd_circular_buffer *buffer, unsigned int number, unsigned int offset) {
+    int buffer_offset = 0;
+    int i;
+
+    if (number >= AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED) {
+        return -EINVAL;
+    }
+
+    if (offset >= buffer->entry[number].size) {
+        return -EINVAL;
+    }
+
+    for (i = 0; i < number; i++) {
+        if (buffer->entry[i].size == 0) {
+            return -EINVAL;
+        }
+        buffer_offset += buffer->entry[i].size;
+    }
+    return (offset + buffer_offset);
+}
+#endif
+
 /**
  * @param buffer the buffer to search for corresponding offset.  Any necessary locking must be performed by caller.
  * @param char_offset the position to search for in the buffer list, describing the zero referenced
@@ -74,10 +97,13 @@ const char * aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer,
 
     if (buffer->full) {
         ret_ptr = buffer->entry[buffer->out_offs].buffptr;
+        buffer->size -= buffer->entry[buffer->out_offs].size;
     }
     // Adds entry add_entry to buffer in the location specified in buffer->in_offs
     buffer->entry[buffer->in_offs] = *add_entry;
 
+    buffer->size += add_entry->size;
+    
     // Update the buffer->in_offs
     buffer->in_offs = (buffer->in_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
 

@@ -24,6 +24,7 @@
 #include <sys/queue.h>
 #include <pthread.h>
 #include <sys/time.h>
+#include "../aesd-char-driver/aesd_ioctl.h"
 
 
 #define DOMAIN AF_INET
@@ -36,6 +37,10 @@
 #define AESDCHARDEVICE "/dev/aesdchar"
 #else
 #define AESDCHARDEVICE "/var/tmp/aesdsocketdata"
+#endif
+
+#if USE_AESD_CHAR_DEVICE
+const char * ioctl_cmd = "AESDCHAR_IOCSEEKTO:";
 #endif
 
 int file_fd;
@@ -155,34 +160,45 @@ void * thread_function(void* thread_param)
         }
     }
 
-    //lock 
-    pthread_mutex_lock(&lock);
+    if(strncmp(write_buffer, ioctl_cmd, strlen(ioctl_cmd)) == 0) {
+        printf("ioctl command received\n");
+        struct aesd_seekto seekto;
+        
+        sscanf(write_buffer, "%s:%d,%d", ioctl_cmd, &seekto.write_cmd, &seekto.write_cmd_offset);
 
-    //write    
-    int write_bytes = write(file_fd, write_buffer, incoming_bytes);
-    if(write_bytes != incoming_bytes)
-    {
-        printf("write failed\n");
-        perror("write failed\n");
-    } 
-    printf("write success\n");       
+        if(ioctl(file_fd, AESDCHAR_IOCSEEKTO, &seekto)) {
+            printf("ioctl failed with error %d\n", errno);
+            perror("ioctl failed with error %d\n", errno);
+        }
+    } else {
+        pthread_mutex_lock(&lock);
+        int write_bytes = write(file_fd, write_buffer, incoming_bytes);
+        if(write_bytes != incoming_bytes) {
+            printf("write failed\n");
+            perror("write failed\n");
+        }
+        printf("write success\n");
+        pthread_mutex_unlock(&lock);
+    }      
          
-    lseek(file_fd, 0, SEEK_SET);
+    // lseek(file_fd, 0, SEEK_SET);
 
     //read
     while(read(file_fd, &read_data, 1) != 0)
     {
+        pthread_mutex_lock(&lock);
         int sent_status = send(data->clientfd, &read_data, 1, 0);
         if (sent_status == 0)
         {
             printf("send failed\n");
         }
+        pthread_mutex_unlock(&lock);
     }
     printf("send complete\n");
     packet_complete_status = false;
 
     //unlock
-    pthread_mutex_unlock(&lock);
+    
 
     //close connection
     int close_fd = close(data->clientfd);
