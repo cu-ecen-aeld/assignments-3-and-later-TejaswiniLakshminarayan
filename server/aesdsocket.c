@@ -164,11 +164,11 @@ void * thread_function(void* thread_param)
         printf("ioctl command received\n");
         struct aesd_seekto seekto;
         
-        sscanf(write_buffer, "%s:%d,%d", ioctl_cmd, &seekto.write_cmd, &seekto.write_cmd_offset);
+        sscanf(write_buffer, "AESDCHAR_IOCSEEKTO:%d,%d", &seekto.write_cmd, &seekto.write_cmd_offset);
 
         if(ioctl(file_fd, AESDCHAR_IOCSEEKTO, &seekto)) {
             printf("ioctl failed with error %d\n", errno);
-            perror("ioctl failed with error %d\n", errno);
+            perror("ioctl failed.");
         }
     } else {
         pthread_mutex_lock(&lock);
